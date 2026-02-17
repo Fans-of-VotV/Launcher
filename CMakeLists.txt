@@ -22,6 +22,14 @@ target_link_libraries(main_app PRIVATE
   webview::core
 )
 
+target_precompile_headers(main_app PRIVATE
+  "Source/StdAfx.hpp"
+)
+
+target_compile_options(main_app PRIVATE
+  "/FI${CMAKE_CURRENT_SOURCE_DIR}/Source/StdAfx.hpp"
+)
+
 set_target_properties(main_app PROPERTIES
   CXX_STANDARD 20
   OUTPUT_NAME "Voices of the Void Launcher"
