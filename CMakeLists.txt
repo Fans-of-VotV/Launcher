@@ -15,8 +15,11 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(webview)
 
-file(GLOB_RECURSE SOURCES "Source/*.cpp" "Source/*.hpp")
-add_executable(main_app WIN32 ${SOURCES})
+add_executable(main_app WIN32
+  "Source/WebAssets.hpp"
+  "Source/WinMain.cpp"
+  "Source/Generated/WebAssets.cpp"
+)
 
 target_link_libraries(main_app PRIVATE
   webview::core
