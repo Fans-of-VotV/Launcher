@@ -9,7 +9,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
     w.set_html("Hello, world!");
     w.run();
   }
-  catch (webview::exception const& exc) {
+  catch (std::exception const& exc) {
     MessageBoxA(NULL, exc.what(), "Unhandled exception", MB_ICONERROR);
     return 1;
   }
