@@ -1,19 +1,14 @@
 cmake_minimum_required(VERSION 3.18)
 
-include(FetchContent)
+include(CMake/WebView.cmake)
 
 project(VotV-Community-Launcher
   VERSION 0.1.0.0
   LANGUAGES CXX
 )
 
-FetchContent_Declare(
-  webview
-  GIT_REPOSITORY https://github.com/webview/webview
-  GIT_TAG        0.12.0
-)
-
-FetchContent_MakeAvailable(webview)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake/modules")
+find_webview_libs()
 
 add_executable(main_app WIN32
   "Source/WebAssets.hpp"
@@ -22,7 +17,7 @@ add_executable(main_app WIN32
 )
 
 target_link_libraries(main_app PRIVATE
-  webview::core
+  MSWebView2::headers
 )
 
 target_precompile_headers(main_app PRIVATE
