@@ -43,17 +43,7 @@ function bundleWebAssets(): Plugin {
       const files = await listDirectory(distDir);
       files.sort();
 
-      const templateFilePath = path.resolve(__dirname, "../Source/WebAssets.cpp.in");
-      const outputFilePath = path.resolve(__dirname, "../Source/Generated/WebAssets.cpp");
-
-      const templateFile = await fs.promises.readFile(templateFilePath, "utf-8");
-
-      const assetTemplateBeginMarker = "@ASSET_TEMPLATE_BEGIN@";
-      const assetTemplateEndMarker = "@ASSET_TEMPLATE_END@";
-
-      const assetTemplateBegin = templateFile.search(assetTemplateBeginMarker);
-      const assetTemplateEnd = templateFile.search(assetTemplateEndMarker);
-      const assetTemplate = templateFile.substring(assetTemplateBegin + assetTemplateBeginMarker.length, assetTemplateEnd);
+      const outputFilePath = path.resolve(__dirname, "bundle/WebAssetsBundle.inc");
 
       let generatedAssets = "";
       
@@ -67,24 +57,13 @@ function bundleWebAssets(): Plugin {
         const pathname = '/' + path.relative(distDir, assetPath).replaceAll('\\', '/');
         const mimeType = mime.lookup(pathname) || "application/octet-stream";
 
-        const generated = assetTemplate
-          .replaceAll("@ASSET_ID@", String(assetId))
-          .replaceAll("@ASSET_BYTES@", bytes)
-          .replaceAll("@ASSET_PATHNAME@", pathname)
-          .replaceAll("@ASSET_MIME_TYPE@", mimeType);
-
-        generatedAssets += generated + '\n';
+        generatedAssets += `BUNDLED_ASSET(${assetId},"${pathname}","${mimeType}",${bytes})\n`;
 
         ++assetId;
       }
 
-      const result =
-        templateFile.substring(0, assetTemplateBegin)
-        + generatedAssets
-        + templateFile.substring(assetTemplateEnd + assetTemplateEndMarker.length);
-
       await fs.promises.mkdir(path.dirname(outputFilePath), { recursive: true });
-      await fs.promises.writeFile(outputFilePath, result, "utf-8");
+      await fs.promises.writeFile(outputFilePath, generatedAssets, "utf-8");
 
       console.log("Assets bundled to %s", outputFilePath);
     }

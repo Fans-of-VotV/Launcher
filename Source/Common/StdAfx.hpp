@@ -18,3 +18,14 @@ typedef unsigned int uint;
   IMMOVABLE_CLASS(ClassName)                                                                       \
   ClassName() = delete;                                                                            \
   ~ClassName() = delete
+
+#include <type_traits>
+
+template <typename T, typename... Types>
+constexpr bool is_any_of_v = (std::is_same_v<T, Types> || ...);
+
+template <typename T, typename... Types>
+struct is_any_of : std::bool_constant<is_any_of_v<T, Types...>> {};
+
+#include "Common/Logging/Logging.hpp"
+#include "Common/Logging/Win32.hpp"
