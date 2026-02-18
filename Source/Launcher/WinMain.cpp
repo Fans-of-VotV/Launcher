@@ -2,27 +2,103 @@
 #include "Common/Logging/Win32.hpp"
 #include "Launcher/WebAssets.hpp"
 #include "Launcher/WebViewProvider.hpp"
+#include <dwmapi.h>
 #include <iostream>
-#include <wrl.h>
+#include <webview/webview.h>
 
-using Microsoft::WRL::Callback;
+#define CLASS_NAME L"votv-community-launcher"
+
+HWND MainWindow = nullhandle;
 
 static void InitializeConsole() {
   BOOL attached = AttachConsole(ATTACH_PARENT_PROCESS);
-
-  if (!attached) {
+  if (!attached)
     AllocConsole();
 
-    DWORD consoleMode;
-    HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
-    GetConsoleMode(output, &consoleMode);
-    SetConsoleMode(output, consoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-    SetConsoleOutputCP(CP_UTF8);
-  }
+  DWORD consoleMode;
+  HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+  GetConsoleMode(output, &consoleMode);
+  SetConsoleMode(output, consoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+  SetConsoleOutputCP(CP_UTF8);
 
   freopen("CONOUT$", "w", stdout);
   freopen("CONOUT$", "w", stderr);
   std::ios::sync_with_stdio(true);
+}
+
+extern "C" NTSYSAPI NTSTATUS RtlGetVersion(PRTL_OSVERSIONINFOW lpVersionInformation);
+
+static void EnableDpiAwareness() {
+  RTL_OSVERSIONINFOW versionInfo { 0 };
+  versionInfo.dwOSVersionInfoSize = sizeof(versionInfo);
+  if (RtlGetVersion(&versionInfo) != 0)
+    return;
+
+  bool isV2 = versionInfo.dwMajorVersion >= 10 && versionInfo.dwBuildNumber >= 15063;
+  auto ctx =
+    isV2 ? DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 : DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE;
+
+  SetProcessDpiAwarenessContext(ctx);
+}
+
+static void EnableNonClientDpiScalingIfNeeded(HWND window) {
+  auto windowAwareness = GetWindowDpiAwarenessContext(window);
+  if (windowAwareness == nullptr)
+    return;
+
+  if (!AreDpiAwarenessContextsEqual(windowAwareness, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE))
+    return;
+
+  EnableNonClientDpiScaling(window);
+}
+
+static bool IsDarkThemeEnabled() {
+  DWORD useLightTheme = 0;
+  LRESULT status = RegGetValueW(
+    HKEY_CURRENT_USER,
+    L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+    L"AppsUseLightTheme",
+    RRF_RT_DWORD,
+    nullptr,
+    &useLightTheme,
+    nullptr
+  );
+
+  if (status != ERROR_SUCCESS)
+    useLightTheme = 0;
+
+  return !useLightTheme;
+}
+
+static void ApplyWindowTheme(HWND window) {
+  BOOL darkModeEnabled = IsDarkThemeEnabled() ? TRUE : FALSE;
+
+  auto status = DwmSetWindowAttribute(
+    window, DWMWA_USE_IMMERSIVE_DARK_MODE, &darkModeEnabled, sizeof(darkModeEnabled)
+  );
+  if (status != S_OK) {
+    (void)DwmSetWindowAttribute(
+      window,
+      19 /* DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_V10_0_19041 */,
+      &darkModeEnabled,
+      sizeof(darkModeEnabled)
+    );
+  }
+}
+
+static LRESULT WINAPI WndProc(HWND window, UINT msg, WPARAM wparam, LPARAM lparam) {
+  switch (msg) {
+    case WM_NCCREATE: {
+      MainWindow = window;
+      EnableNonClientDpiScalingIfNeeded(window);
+      ApplyWindowTheme(window);
+    } break;
+    case WM_CLOSE:
+      DestroyWindow(window);
+      break;
+  }
+
+  return DefWindowProcW(window, msg, wparam, lparam);
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
@@ -48,6 +124,41 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
     return 1;
   }
 
+  EnableDpiAwareness();
+
+  WNDCLASSEXW wndClass { 0 };
+  wndClass.cbSize = sizeof(wndClass);
+  wndClass.hInstance = hInstance;
+  wndClass.lpszClassName = CLASS_NAME;
+  wndClass.lpfnWndProc = WndProc;
+  RegisterClassExW(&wndClass);
+
+  HWND window = CreateWindowW(
+    CLASS_NAME,
+    L"Voices of the Void Community Launcher",
+    WS_OVERLAPPEDWINDOW,
+    CW_USEDEFAULT,
+    CW_USEDEFAULT,
+    0,
+    0,
+    nullptr,
+    nullptr,
+    hInstance,
+    nullptr
+  );
+
+  ShowWindow(window, SW_SHOW);
+  UpdateWindow(window);
+  SetFocus(window);
+
+  MSG msg;
+  while (GetMessageW(&msg, nullptr, 0, 0)) {
+    TranslateMessage(&msg);
+    DispatchMessageW(&msg);
+  }
+
+  DestroyWindow(window);
+  UnregisterClassW(CLASS_NAME, hInstance);
   CoUninitialize();
   return 0;
 }

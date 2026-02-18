@@ -43,6 +43,9 @@ FetchContent_MakeAvailable(fmt)
 target_link_libraries(main_app PRIVATE
   MSWebView2::headers
   fmt::fmt
+
+  ntdll.lib
+  Dwmapi.lib
 )
 
 target_include_directories(main_app PRIVATE
