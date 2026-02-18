@@ -9,6 +9,7 @@
 #define CLASS_NAME L"votv-community-launcher"
 
 HWND MainWindow = nullhandle;
+bool WantCloseWindow = false;
 
 static void InitializeConsole() {
   BOOL attached = AttachConsole(ATTACH_PARENT_PROCESS);
@@ -26,7 +27,7 @@ static void InitializeConsole() {
   std::ios::sync_with_stdio(true);
 }
 
-extern "C" NTSYSAPI NTSTATUS RtlGetVersion(PRTL_OSVERSIONINFOW lpVersionInformation);
+extern "C" NTSYSAPI NTSTATUS WINAPI RtlGetVersion(PRTL_OSVERSIONINFOW lpVersionInformation);
 
 static void EnableDpiAwareness() {
   RTL_OSVERSIONINFOW versionInfo { 0 };
@@ -88,17 +89,24 @@ static void ApplyWindowTheme(HWND window) {
 
 static LRESULT WINAPI WndProc(HWND window, UINT msg, WPARAM wparam, LPARAM lparam) {
   switch (msg) {
-    case WM_NCCREATE: {
-      MainWindow = window;
+    case WM_NCCREATE:
       EnableNonClientDpiScalingIfNeeded(window);
       ApplyWindowTheme(window);
-    } break;
+      return DefWindowProcW(window, msg, wparam, lparam);
     case WM_CLOSE:
-      DestroyWindow(window);
+      if (window == MainWindow) {
+        WantCloseWindow = true;
+      }
+      else {
+        DestroyWindow(window);
+      }
       break;
+
+    default:
+      return DefWindowProcW(window, msg, wparam, lparam);
   }
 
-  return DefWindowProcW(window, msg, wparam, lparam);
+  return 0;
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
@@ -133,7 +141,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
   wndClass.lpfnWndProc = WndProc;
   RegisterClassExW(&wndClass);
 
-  HWND window = CreateWindowW(
+  MainWindow = CreateWindowW(
     CLASS_NAME,
     L"Voices of the Void Community Launcher",
     WS_OVERLAPPEDWINDOW,
@@ -147,17 +155,21 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
     nullptr
   );
 
-  ShowWindow(window, SW_SHOW);
-  UpdateWindow(window);
-  SetFocus(window);
+  ShowWindow(MainWindow, SW_SHOW);
+  UpdateWindow(MainWindow);
+  SetFocus(MainWindow);
 
   MSG msg;
-  while (GetMessageW(&msg, nullptr, 0, 0)) {
-    TranslateMessage(&msg);
-    DispatchMessageW(&msg);
+  while (!WantCloseWindow) {
+    while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
+      TranslateMessage(&msg);
+      DispatchMessageW(&msg);
+    }
+
+    SwitchToThread();
   }
 
-  DestroyWindow(window);
+  DestroyWindow(MainWindow);
   UnregisterClassW(CLASS_NAME, hInstance);
   CoUninitialize();
   return 0;
