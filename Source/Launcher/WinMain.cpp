@@ -1,10 +1,13 @@
+#include "Common/CO.hpp"
 #include "Common/Logging/Logging.hpp"
 #include "Common/Logging/Win32.hpp"
 #include "Launcher/WebAssets.hpp"
 #include "Launcher/WebViewProvider.hpp"
 #include <dwmapi.h>
 #include <iostream>
-#include <webview/webview.h>
+#include <wrl.h>
+
+using Microsoft::WRL::Callback;
 
 #define CLASS_NAME L"votv-community-launcher"
 
@@ -147,12 +150,47 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
     WS_OVERLAPPEDWINDOW,
     CW_USEDEFAULT,
     CW_USEDEFAULT,
-    0,
-    0,
+    1280,
+    720,
     nullptr,
     nullptr,
     hInstance,
     nullptr
+  );
+
+  REPORT_HRESULT(
+    WebViewProvider::CreateWebViewEnvironmentWithOptionsInternal(
+      true,
+      webview2_runtime_type::installed,
+      nullptr,
+      nullptr,
+      Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
+        [&](HRESULT, ICoreWebView2Environment* env) -> HRESULT {
+          REPORT_HRESULT(env->CreateCoreWebView2Controller(
+            MainWindow,
+            Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
+              [&](HRESULT, ICoreWebView2Controller* ctrl) -> HRESULT {
+                ctrl->AddRef();
+                ICoreWebView2* webview;
+                REPORT_HRESULT(ctrl->get_CoreWebView2(&webview));
+                webview->AddRef();
+
+                REPORT_HRESULT(webview->Navigate(L"https://google.com"));
+                REPORT_HRESULT(ctrl->put_IsVisible(TRUE));
+                RECT bounds{};
+                if (GetClientRect(MainWindow, &bounds)) {
+                  ctrl->put_Bounds(bounds);
+                }
+
+                return S_OK;
+              }
+            ).Get()
+          ));
+
+          return S_OK;
+        }
+      ).Get()
+    )
   );
 
   ShowWindow(MainWindow, SW_SHOW);
