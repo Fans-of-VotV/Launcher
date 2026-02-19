@@ -5,6 +5,7 @@
 #include "Launcher/WebViewProvider.hpp"
 #include <dwmapi.h>
 #include <iostream>
+#include <shlwapi.h>
 #include <wrl.h>
 
 using Microsoft::WRL::Callback;
@@ -13,6 +14,8 @@ using Microsoft::WRL::Callback;
 
 HWND MainWindow = nullhandle;
 bool WantCloseWindow = false;
+CO<ICoreWebView2Controller> WebViewCtrl;
+CO<ICoreWebView2_5> WebView;
 
 static void InitializeConsole() {
   BOOL attached = AttachConsole(ATTACH_PARENT_PROCESS);
@@ -90,6 +93,15 @@ static void ApplyWindowTheme(HWND window) {
   }
 }
 
+static void ResizeWebView() {
+  if (WebViewCtrl.Get() == nullptr)
+    return;
+
+  RECT bounds {};
+  if (GetClientRect(MainWindow, &bounds))
+    REPORT_HRESULT(WebViewCtrl->put_Bounds(bounds));
+}
+
 static LRESULT WINAPI WndProc(HWND window, UINT msg, WPARAM wparam, LPARAM lparam) {
   switch (msg) {
     case WM_NCCREATE:
@@ -104,12 +116,82 @@ static LRESULT WINAPI WndProc(HWND window, UINT msg, WPARAM wparam, LPARAM lpara
         DestroyWindow(window);
       }
       break;
+    case WM_SIZE:
+      ResizeWebView();
+      break;
 
     default:
       return DefWindowProcW(window, msg, wparam, lparam);
   }
 
   return 0;
+}
+
+static HRESULT HandleRequestedResource(ICoreWebView2WebResourceRequestedEventArgs* args) {
+  CO<ICoreWebView2WebResourceRequest> request;
+  REPORT_HRESULT(args->get_Request(&request));
+
+  LPWSTR uriRaw;
+  REPORT_HRESULT(request->get_Uri(&uriRaw));
+
+  std::wstring uri = uriRaw;
+  CoTaskMemFree(uriRaw);
+
+  if (!uri.starts_with(L"https://app/"))
+    return S_OK;
+
+  auto pathname = uri.substr(11);
+  auto asset = WebAssets::Get(String(pathname).toUTF8());
+
+  Log::Debug("Fetching asset {:?} -> {}", String(pathname), fmt::ptr(asset));
+
+  CO<ICoreWebView2WebResourceResponse> response;
+  CO<ICoreWebView2Environment> env;
+
+  REPORT_HRESULT(WebView->get_Environment(&env));
+
+  if (asset == nullptr) {
+    REPORT_HRESULT(env->CreateWebResourceResponse(nullptr, 404, L"Not Found", nullptr, &response));
+    REPORT_HRESULT(args->put_Response(response.Get()));
+    return S_OK;
+  }
+
+  auto stream = SHCreateMemStream(static_cast<LPCBYTE>(asset->data), asset->dataSize);
+
+  auto headers = fmt::format("Content-Type: {}", asset->mimeType);
+
+  REPORT_HRESULT(env->CreateWebResourceResponse(
+    stream, 200, L"OK", String::FromUTF8(headers).toSTL<wchar_t>().c_str(), &response
+  ));
+  REPORT_HRESULT(args->put_Response(response.Get()));
+
+  return S_OK;
+}
+
+static void AfterWebViewCreated(ICoreWebView2Controller* ctrl, ICoreWebView2* webview) {
+  WebViewCtrl = { ctrl, AddNewReference };
+
+  REPORT_HRESULT(
+    webview->QueryInterface(__uuidof(ICoreWebView2_5), reinterpret_cast<void**>(&WebView))
+  );
+
+  REPORT_HRESULT(ctrl->put_IsVisible(TRUE));
+  ResizeWebView();
+
+  REPORT_HRESULT(
+    webview->AddWebResourceRequestedFilter(L"https://app/*", COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL)
+  );
+
+  REPORT_HRESULT(webview->add_WebResourceRequested(
+    Callback<ICoreWebView2WebResourceRequestedEventHandler>(
+      [&](ICoreWebView2*, ICoreWebView2WebResourceRequestedEventArgs* args) -> HRESULT {
+        return HandleRequestedResource(args);
+      }
+    ).Get(),
+    nullptr
+  ));
+
+  REPORT_HRESULT(webview->Navigate(L"https://app/index.html"));
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
@@ -170,18 +252,9 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
             MainWindow,
             Callback<ICoreWebView2CreateCoreWebView2ControllerCompletedHandler>(
               [&](HRESULT, ICoreWebView2Controller* ctrl) -> HRESULT {
-                ctrl->AddRef();
                 ICoreWebView2* webview;
                 REPORT_HRESULT(ctrl->get_CoreWebView2(&webview));
-                webview->AddRef();
-
-                REPORT_HRESULT(webview->Navigate(L"https://google.com"));
-                REPORT_HRESULT(ctrl->put_IsVisible(TRUE));
-                RECT bounds{};
-                if (GetClientRect(MainWindow, &bounds)) {
-                  ctrl->put_Bounds(bounds);
-                }
-
+                AfterWebViewCreated(ctrl, webview);
                 return S_OK;
               }
             ).Get()
