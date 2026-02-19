@@ -191,7 +191,11 @@ static void AfterWebViewCreated(ICoreWebView2Controller* ctrl, ICoreWebView2* we
     nullptr
   ));
 
+#ifdef _DEBUG
+  REPORT_HRESULT(webview->Navigate(L"http://localhost:5173/"));
+#else
   REPORT_HRESULT(webview->Navigate(L"https://app/index.html"));
+#endif
 }
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, LPWSTR, int) {
