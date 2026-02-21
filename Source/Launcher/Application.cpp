@@ -1,5 +1,6 @@
 #include "Application.hpp"
 
+#include "Launcher/CommandLine.hpp"
 #include "Launcher/WebAssets.hpp"
 #include "Launcher/WebViewProvider.hpp"
 #include <dwmapi.h>
@@ -85,8 +86,11 @@ void Application::WebViewOnControllerCreated(HRESULT errorCode, ICoreWebView2Con
   ));
   REPORT_HRESULT(m_webView->add_WebResourceRequested(m_webViewHandler.Get(), nullptr));
 
-  REPORT_HRESULT(m_webView->Navigate(L"https://" APP_DOMAIN L"/index.html"));
-  // REPORT_HRESULT(m_webView->Navigate(L"http://localhost:5173"));
+  auto targetUrl = L"https://" APP_DOMAIN L"/index.html";
+  if (CommandLine::IsLocalHost)
+    targetUrl = L"http://localhost:5173";
+
+  REPORT_HRESULT(m_webView->Navigate(targetUrl));
 }
 
 void Application::WebViewOnWebResourceRequested(
@@ -105,7 +109,7 @@ void Application::WebViewOnWebResourceRequested(
   if (!uri.starts_with(L"https://" APP_DOMAIN L"/"))
     return;
 
-  auto pathname = uri.substr(_countof(L"https://" APP_DOMAIN)-1);
+  auto pathname = uri.substr(_countof(L"https://" APP_DOMAIN) - 1);
   auto asset = WebAssets::Get(String(pathname).toUTF8());
 
   Log::Debug("Fetching asset {:?} -> {}", String(pathname), fmt::ptr(asset));
