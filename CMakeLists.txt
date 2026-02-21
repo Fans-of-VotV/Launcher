@@ -57,7 +57,7 @@ target_precompile_headers(main_app PRIVATE "Source/Common/StdAfx.hpp")
 target_compile_options(main_app PRIVATE "/FI${CMAKE_CURRENT_SOURCE_DIR}/Source/Common/StdAfx.hpp")
 
 set_target_properties(main_app PROPERTIES
-  CXX_STANDARD 20
+  CXX_STANDARD 26
   OUTPUT_NAME "Voices of the Void Launcher"
 )
 

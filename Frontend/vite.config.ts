@@ -4,6 +4,7 @@ import mime from "mime-types";
 import { defineConfig } from "vite";
 import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 export async function listDirectory(baseDirPath: string, fullPaths: boolean = true) {
   const result: string[] = [];
@@ -49,15 +50,19 @@ function bundleWebAssets(): Plugin {
       
       let assetId = 0;
       for (const assetPath of files) {
-        const buffer = await fs.promises.readFile(assetPath);
-        const bytes = Array.from(buffer)
-          .map(b => `0x${b.toString(16).padStart(2, "0")}`)
-          .join(',');
-
         const pathname = '/' + path.relative(distDir, assetPath).replaceAll('\\', '/');
         const mimeType = mime.lookup(pathname) || "application/octet-stream";
 
-        generatedAssets += `BUNDLED_ASSET(${assetId},"${pathname}","${mimeType}",${bytes})\n`;
+        generatedAssets +=
+`{
+  static char _asset${assetId}_data[] = {
+#embed <${path.resolve(assetPath).replaceAll('\\', '/')}>
+  };
+  auto pathname = std::string { "${pathname}" };
+  m_assets.emplace(pathname, std::make_unique<WebAsset>(
+    ${assetId}, pathname, "${mimeType}", _asset${assetId}_data, sizeof(_asset${assetId}_data)
+  ));
+}\n`;
 
         ++assetId;
       }
@@ -72,5 +77,5 @@ function bundleWebAssets(): Plugin {
 
 export default defineConfig({
   base: "./",
-  plugins: [react(), bundleWebAssets()]
+  plugins: [react(), tsconfigPaths(), bundleWebAssets()]
 });
