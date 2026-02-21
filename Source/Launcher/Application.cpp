@@ -6,6 +6,11 @@
 #include <iostream>
 #include <shlwapi.h>
 
+// Microsoft's dumbasses issue:
+//  Hosting app on non-special domains adds additional 2 seconds delay because of TLD resolving:
+//  https://github.com/MicrosoftEdge/WebView2Feedback/issues/2381#issuecomment-1105457773
+#define APP_DOMAIN L"app.example"
+
 Application::Application() = default;
 Application::~Application() = default;
 
@@ -76,11 +81,12 @@ void Application::WebViewOnControllerCreated(HRESULT errorCode, ICoreWebView2Con
   REPORT_HRESULT(ctrl->put_IsVisible(true));
 
   REPORT_HRESULT(m_webView->AddWebResourceRequestedFilter(
-    L"https://app/*", COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL
+    L"https://" APP_DOMAIN L"/*", COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL
   ));
   REPORT_HRESULT(m_webView->add_WebResourceRequested(m_webViewHandler.Get(), nullptr));
 
-  REPORT_HRESULT(m_webView->Navigate(L"https://app/index.html"));
+  REPORT_HRESULT(m_webView->Navigate(L"https://" APP_DOMAIN L"/index.html"));
+  // REPORT_HRESULT(m_webView->Navigate(L"http://localhost:5173"));
 }
 
 void Application::WebViewOnWebResourceRequested(
@@ -96,10 +102,10 @@ void Application::WebViewOnWebResourceRequested(
   std::wstring uri = uriRaw;
   CoTaskMemFree(uriRaw);
 
-  if (!uri.starts_with(L"https://app/"))
+  if (!uri.starts_with(L"https://" APP_DOMAIN L"/"))
     return;
 
-  auto pathname = uri.substr(11);
+  auto pathname = uri.substr(_countof(L"https://" APP_DOMAIN)-1);
   auto asset = WebAssets::Get(String(pathname).toUTF8());
 
   Log::Debug("Fetching asset {:?} -> {}", String(pathname), fmt::ptr(asset));
@@ -117,7 +123,12 @@ void Application::WebViewOnWebResourceRequested(
 
   auto stream = SHCreateMemStream(static_cast<LPCBYTE>(asset->data), asset->dataSize);
 
-  auto headers = fmt::format("Content-Type: {}", asset->mimeType);
+  auto headers = fmt::format(
+    "Content-Type: {}\r\n"
+    "Content-Length: {}",
+    asset->mimeType,
+    asset->dataSize
+  );
 
   REPORT_HRESULT(env->CreateWebResourceResponse(
     stream, 200, L"OK", String::FromUTF8(headers).toSTL<wchar_t>().c_str(), &response
