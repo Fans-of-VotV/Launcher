@@ -27,5 +27,10 @@ constexpr bool is_any_of_v = (std::is_same_v<T, Types> || ...);
 template <typename T, typename... Types>
 struct is_any_of : std::bool_constant<is_any_of_v<T, Types...>> {};
 
+template <typename T>
+constexpr T implicit_cast(std::type_identity_t<T> value) noexcept {
+  return value;
+}
+
 #include "Common/Logging/Logging.hpp"
 #include "Common/Logging/Win32.hpp"

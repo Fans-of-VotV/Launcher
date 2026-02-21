@@ -1,18 +1,14 @@
 #pragma once
 
+#include "Common/Logging/Asserts.hpp"
 #include <WebView2.h>
 #include <string_view>
 
-enum class webview2_runtime_type {
-  installed = 0,
-  embedded = 1
-};
-
 using CreateWebViewEnvironmentWithOptionsInternal_t = HRESULT(STDMETHODCALLTYPE*)(
   bool,
-  webview2_runtime_type,
+  int,
   PCWSTR,
-  IUnknown*,
+  ICoreWebView2EnvironmentOptions*,
   ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler*
 );
 
@@ -20,13 +16,22 @@ class WebViewProvider {
   STATIC_CLASS(WebViewProvider);
 
 public:
-  static inline CreateWebViewEnvironmentWithOptionsInternal_t
-    CreateWebViewEnvironmentWithOptionsInternal = nullptr;
-
-public:
   static bool SearchForImpl();
+
+  static inline HRESULT CreateEnvironment(
+    PCWSTR userDataDir,
+    ICoreWebView2EnvironmentOptions* options,
+    ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* handler
+  ) {
+    ASSERT(CreateWebViewEnvironmentWithOptionsInternal != nullptr);
+    return CreateWebViewEnvironmentWithOptionsInternal(true, 0, userDataDir, options, handler);
+  }
 
 private:
   static bool SearchForInstalledClient(bool system);
   static void DoLoadDLL(std::wstring_view dllPath);
+
+private:
+  static inline CreateWebViewEnvironmentWithOptionsInternal_t
+    CreateWebViewEnvironmentWithOptionsInternal = nullptr;
 };
