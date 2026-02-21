@@ -30,6 +30,8 @@ bool WebViewProvider::SearchForInstalledClient(bool system) {
     regKey, L"EBWebView", nullptr, nullptr, reinterpret_cast<LPBYTE>(&buffer[0]), &length
   );
 
+  RegCloseKey(regKey);
+
   int i = (length / sizeof(wchar_t)) - 1;
   for (; i >= 0; --i) {
     if (buffer[i] == L'\\')
