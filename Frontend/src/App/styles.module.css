@@ -1,0 +1,46 @@
+.background_image {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  filter: brightness(44%);
+}
+
+.content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.title {
+  color: #eee;
+  font-size: 4em;
+  flex: 1;
+  display: flex;
+  align-items: end;
+  user-select: none;
+}
+
+.main_wrapper {
+  flex: 2;
+  display: flex;
+}
+
+.main {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15em;
+}
+
+.play_button {
+  width: 400px;
+  height: 50px;
+}
