@@ -1,6 +1,6 @@
 #include "WebViewHandler.hpp"
 
-#include "Application.hpp"
+#include "Launcher/Application.hpp"
 
 WebViewHandler::WebViewHandler(Application* app) : m_app(app) {}
 
