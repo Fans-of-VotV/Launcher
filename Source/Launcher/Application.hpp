@@ -18,12 +18,15 @@ public:
   int Start();
 
 private:
+  void OnPlayClicked();
+
   void WebViewOnEnvironmentCreated(HRESULT errorCode, ICoreWebView2Environment* env);
   void WebViewOnControllerCreated(HRESULT errorCode, ICoreWebView2Controller* ctrl);
   void WebViewOnWebResourceRequested(
     ICoreWebView2* sender,
     ICoreWebView2WebResourceRequestedEventArgs* args
   );
+  void WebViewOnWebMessage(ICoreWebView2* sender, ICoreWebView2WebMessageReceivedEventArgs* args);
 
   void ResizeWebView();
 

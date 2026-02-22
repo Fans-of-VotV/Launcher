@@ -24,3 +24,12 @@ HRESULT WebViewHandler::Invoke(
   m_app->WebViewOnWebResourceRequested(sender, args);
   return S_OK;
 }
+
+// ICoreWebView2WebMessageReceivedEventHandler:
+HRESULT WebViewHandler::Invoke(
+  ICoreWebView2* sender,
+  ICoreWebView2WebMessageReceivedEventArgs* args
+) {
+  m_app->WebViewOnWebMessage(sender, args);
+  return S_OK;
+}

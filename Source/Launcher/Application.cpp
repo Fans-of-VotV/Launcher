@@ -1,5 +1,6 @@
 #include "Application.hpp"
 
+#include "Common/json.hpp"
 #include "Launcher/CommandLine.hpp"
 #include "Launcher/WebAssets.hpp"
 #include "Launcher/WebViewProvider.hpp"
@@ -57,6 +58,10 @@ int Application::Start() {
   return 0;
 }
 
+void Application::OnPlayClicked() {
+  Log::Debug("Play clicked");
+}
+
 void Application::WebViewOnEnvironmentCreated(HRESULT errorCode, ICoreWebView2Environment* env) {
   ASSERT(errorCode == S_OK);
 
@@ -71,26 +76,30 @@ void Application::WebViewOnControllerCreated(HRESULT errorCode, ICoreWebView2Con
   Log::Verbose("WebView2 controller created: {}", fmt::ptr(ctrl));
   m_webViewCtrl = { ctrl, AddNewReference };
 
-  CO<ICoreWebView2> webViewBase;
-  REPORT_HRESULT(ctrl->get_CoreWebView2(&webViewBase));
-  REPORT_HRESULT(webViewBase->QueryInterface(&m_webView));
-  webViewBase.Release();
+  {
+    CO<ICoreWebView2> webViewBase;
+    REPORT_HRESULT(ctrl->get_CoreWebView2(&webViewBase));
+    REPORT_HRESULT(webViewBase->QueryInterface(&m_webView));
+    webViewBase.Release();
+  }
 
   Log::Verbose("WebView2_5: {}", fmt::ptr(m_webView.Get()));
 
-  ResizeWebView();
-  REPORT_HRESULT(ctrl->put_IsVisible(true));
+  REPORT_HRESULT(m_webView->add_WebResourceRequested(m_webViewHandler.Get(), nullptr));
+  REPORT_HRESULT(m_webView->add_WebMessageReceived(m_webViewHandler.Get(), nullptr));
 
   REPORT_HRESULT(m_webView->AddWebResourceRequestedFilter(
     L"https://" APP_DOMAIN L"/*", COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL
   ));
-  REPORT_HRESULT(m_webView->add_WebResourceRequested(m_webViewHandler.Get(), nullptr));
 
   auto targetUrl = L"https://" APP_DOMAIN L"/index.html";
   if (CommandLine::IsLocalHost)
     targetUrl = L"http://localhost:5173";
 
   REPORT_HRESULT(m_webView->Navigate(targetUrl));
+
+  ResizeWebView();
+  REPORT_HRESULT(ctrl->put_IsVisible(true));
 }
 
 void Application::WebViewOnWebResourceRequested(
@@ -138,6 +147,34 @@ void Application::WebViewOnWebResourceRequested(
     stream, 200, L"OK", String::FromUTF8(headers).toSTL<wchar_t>().c_str(), &response
   ));
   REPORT_HRESULT(args->put_Response(response.Get()));
+}
+
+void Application::WebViewOnWebMessage(
+  ICoreWebView2*, ICoreWebView2WebMessageReceivedEventArgs* args
+) {
+  wchar_t* jsonStrRaw = nullptr;
+  REPORT_HRESULT(args->get_WebMessageAsJson(&jsonStrRaw));
+
+  auto jsonStr = String(jsonStrRaw);
+  CoTaskMemFree(jsonStrRaw);
+
+  nlohmann::json message;
+  try {
+    message = nlohmann::json::parse(jsonStr.toUTF8());
+  }
+  catch (std::exception& error) {
+    Log::Error("Failed to parse JSON from web message: {}", error.what());
+    return;
+  }
+
+  if (!message.contains("type"))
+    return;
+
+  std::string msgType = message["type"];
+
+  if (msgType == "play") {
+    OnPlayClicked();
+  }
 }
 
 void Application::ResizeWebView() {

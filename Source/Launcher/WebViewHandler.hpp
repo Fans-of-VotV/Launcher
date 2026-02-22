@@ -9,7 +9,8 @@ class WebViewHandler final
   : public CommonObject<
       ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler,
       ICoreWebView2CreateCoreWebView2ControllerCompletedHandler,
-      ICoreWebView2WebResourceRequestedEventHandler> {
+      ICoreWebView2WebResourceRequestedEventHandler,
+      ICoreWebView2WebMessageReceivedEventHandler> {
 public:
   DECLARE_COMMON_OBJECT_MAKER(WebViewHandler)
 
@@ -28,6 +29,10 @@ public:
   // ICoreWebView2WebResourceRequestedEventHandler:
   HRESULT STDMETHODCALLTYPE
   Invoke(ICoreWebView2* sender, ICoreWebView2WebResourceRequestedEventArgs* args) override;
+
+  // ICoreWebView2WebMessageReceivedEventHandler:
+  HRESULT STDMETHODCALLTYPE
+  Invoke(ICoreWebView2* sender, ICoreWebView2WebMessageReceivedEventArgs* args) override;
 
 private:
   Application* m_app;
