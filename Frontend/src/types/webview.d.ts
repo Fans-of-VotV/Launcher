@@ -24,6 +24,9 @@ declare global {
   interface Chrome {
     webview: WebView;
   }
+
+  // set in main.tsx
+  var webview: WebView;
 }
 
 export {};

@@ -4,6 +4,8 @@ import App from "./App";
 
 import "./index.css";
 
+window.webview = window.chrome.webview;
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
