@@ -17,6 +17,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   add_compile_options("/utf-8")
 endif()
 
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /OPT:REF,ICF")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake/modules")
@@ -57,6 +58,5 @@ target_precompile_headers(main_app PRIVATE "Source/Common/StdAfx.hpp")
 target_compile_options(main_app PRIVATE "/FI${CMAKE_CURRENT_SOURCE_DIR}/Source/Common/StdAfx.hpp")
 
 set_target_properties(main_app PROPERTIES
-  CXX_STANDARD 26
   OUTPUT_NAME "Voices of the Void Launcher"
 )
