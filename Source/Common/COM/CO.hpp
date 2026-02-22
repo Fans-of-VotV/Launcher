@@ -100,6 +100,8 @@ class _CommonObjectInheritanceImpl<> {};
 
 template <class... Interfaces>
 class CommonObject : public Interfaces... {
+  IMMOVABLE_CLASS(CommonObject);
+
   static_assert(sizeof...(Interfaces) > 0, "At least one interface required");
 
 protected:
