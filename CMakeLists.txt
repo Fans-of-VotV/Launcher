@@ -47,6 +47,7 @@ target_link_libraries(main_app PRIVATE
 
   ntdll.lib
   Dwmapi.lib
+  Shlwapi.lib
 )
 
 target_include_directories(main_app PRIVATE
