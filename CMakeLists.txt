@@ -49,6 +49,8 @@ FetchContent_Declare(
 )
 
 set(FMT_MASTER_PROJECT OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
 FetchContent_MakeAvailable(fmt cpr)
 
 target_link_libraries(main_app PRIVATE
