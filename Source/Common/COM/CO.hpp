@@ -99,8 +99,8 @@ template <>
 class _CommonObjectInheritanceImpl<> {};
 
 template <class... Interfaces>
-class CommonObject : public _CommonObjectInheritanceImpl<Interfaces...> {
-  IMMOVABLE_CLASS(CommonObject);
+class CommonObject : public Interfaces... {
+  static_assert(sizeof...(Interfaces) > 0, "At least one interface required");
 
 protected:
   CommonObject() = default;
@@ -108,33 +108,54 @@ protected:
 public:
   virtual ~CommonObject() = default;
 
-public:
+public: // IUnknown
+  HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, void** outObject) override {
+    if (!outObject)
+      return E_POINTER;
+
+    *outObject = nullptr;
+
+    if (iid == __uuidof(IUnknown)) {
+      *outObject = GetCanonicalIUnknown();
+    }
+    else {
+      QueryInterfaceInternal(iid, outObject);
+    }
+
+    if (*outObject) {
+      AddRef();
+      return S_OK;
+    }
+
+    return E_NOINTERFACE;
+  }
+
   ULONG STDMETHODCALLTYPE AddRef() override {
-    return ++m_refCount;
+    return static_cast<ULONG>(InterlockedIncrement(&m_refCount));
   }
 
   ULONG STDMETHODCALLTYPE Release() override {
-    ULONG newCount = --m_refCount;
+    ULONG count = static_cast<ULONG>(InterlockedDecrement(&m_refCount));
 
-    if (newCount == 0)
+    if (count == 0)
       delete this;
 
-    return newCount;
-  }
-
-  HRESULT STDMETHODCALLTYPE QueryInterface(IID const& iid, void** outObject) override {
-    if (outObject == nullptr)
-      return E_POINTER;
-
-    bool casted =
-      ((__uuidof(Interfaces) == iid && ((*outObject = implicit_cast<Interfaces*>(this)), true)) ||
-       ...);
-
-    return casted ? S_OK : E_NOINTERFACE;
+    return count;
   }
 
 private:
-  ULONG m_refCount = 1;
+  IUnknown* GetCanonicalIUnknown() noexcept {
+    using FirstInterface = std::tuple_element_t<0, std::tuple<Interfaces...>>;
+    return implicit_cast<IUnknown*>(implicit_cast<FirstInterface*>(this));
+  }
+
+  void QueryInterfaceInternal(REFIID iid, void** outObject) noexcept {
+    ((iid == __uuidof(Interfaces) ? (*outObject = implicit_cast<Interfaces*>(this), true) : false) ||
+     ...);
+  }
+
+private:
+  volatile LONG m_refCount = 1;
 };
 
 #define DECLARE_COMMON_OBJECT_MAKER(CLASS)                                                         \
