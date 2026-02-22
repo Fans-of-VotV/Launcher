@@ -38,12 +38,19 @@ FetchContent_Declare(
   GIT_TAG        12.1.0
 )
 
+FetchContent_Declare(
+  cpr
+  GIT_REPOSITORY https://github.com/libcpr/cpr.git
+  GIT_TAG        1.14.2
+)
+
 set(FMT_MASTER_PROJECT OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(fmt)
+FetchContent_MakeAvailable(fmt cpr)
 
 target_link_libraries(main_app PRIVATE
   MSWebView2::headers
   fmt::fmt
+  cpr::cpr
 
   ntdll.lib
   Dwmapi.lib
