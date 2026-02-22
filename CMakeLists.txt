@@ -17,6 +17,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   add_compile_options("/utf-8")
 endif()
 
+# Breaks cpr because of tricky shit with microsoft(obviously, how ANY shit can be without them) and
+#  some other warnings
+add_compile_options("-Wno-error")
+
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /OPT:REF,ICF")
 
