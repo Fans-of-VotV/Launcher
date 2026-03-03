@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Launcher/WebViewHandler.hpp"
+#include "WebViewHandler.hpp"
 
 /**
  * Main application class

@@ -1,11 +1,11 @@
 #include "Application.hpp"
 
-#include "Common/json.hpp"
-#include "Launcher/CommandLine.hpp"
-#include "Launcher/WebAssets.hpp"
-#include "Launcher/WebViewProvider.hpp"
+#include "CommandLine.hpp"
+#include "WebAssets.hpp"
+#include "WebViewProvider.hpp"
 #include <dwmapi.h>
-#include <iostream>
+#include <json.hpp>
+#include <rh/log.hpp>
 #include <shlwapi.h>
 
 // Microsoft's dumbasses issue:
@@ -134,7 +134,7 @@ void Application::WebViewOnWebResourceRequested(
     return;
   }
 
-  auto stream = SHCreateMemStream(static_cast<LPCBYTE>(asset->data), asset->dataSize);
+  auto stream = SHCreateMemStream(static_cast<BYTE const*>(asset->data), asset->dataSize);
 
   auto headers = fmt::format(
     "Content-Type: {}\r\n"
@@ -150,7 +150,8 @@ void Application::WebViewOnWebResourceRequested(
 }
 
 void Application::WebViewOnWebMessage(
-  ICoreWebView2*, ICoreWebView2WebMessageReceivedEventArgs* args
+  ICoreWebView2*,
+  ICoreWebView2WebMessageReceivedEventArgs* args
 ) {
   wchar_t* jsonStrRaw = nullptr;
   REPORT_HRESULT(args->get_WebMessageAsJson(&jsonStrRaw));
@@ -188,7 +189,7 @@ void Application::ResizeWebView() {
 
 bool Application::StaticInit() {
   InitConsole();
-  Logger::Initialize("votv-launcher.log");
+  Logger::Instance = new Logger("votv-launcher.log");
   WebAssets::Initialize();
   if (!InitWebView())
     return false;

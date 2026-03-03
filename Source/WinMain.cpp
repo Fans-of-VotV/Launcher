@@ -1,5 +1,6 @@
-#include "Launcher/Application.hpp"
-#include "Launcher/CommandLine.hpp"
+#include "Application.hpp"
+#include "CommandLine.hpp"
+#include <memory>
 
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, LPWSTR, int) {
   CommandLine::Parse();

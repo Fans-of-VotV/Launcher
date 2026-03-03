@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Common/Logging/Asserts.hpp"
-#include <WebView2.h>
+#include "WebView.hpp"
 #include <string_view>
 
 using CreateWebViewEnvironmentWithOptionsInternal_t = HRESULT(STDMETHODCALLTYPE*)(

@@ -1,5 +1,7 @@
 #include "WebViewProvider.hpp"
 
+#include <rh/String.hpp>
+#include <rh/log.hpp>
 #include <string>
 
 #define WEBVIEW_API_VERSION         1150

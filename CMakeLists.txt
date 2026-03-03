@@ -8,11 +8,6 @@ project(VotV-Community-Launcher
   LANGUAGES CXX
 )
 
-add_compile_definitions(
-  _CRT_SECURE_NO_WARNINGS
-  NOMINMAX
-)
-
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
   add_compile_options("/utf-8")
 endif()
@@ -37,9 +32,9 @@ file(GLOB_RECURSE SOURCES "Source/*.cpp" "Source/*.hpp")
 target_sources(main_app PRIVATE ${SOURCES})
 
 FetchContent_Declare(
-  fmt
-  GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG        12.1.0
+  rhlib
+  GIT_REPOSITORY https://github.com/RedHolms/rhlib.git
+  GIT_TAG        v0.1.3
 )
 
 FetchContent_Declare(
@@ -48,14 +43,16 @@ FetchContent_Declare(
   GIT_TAG        1.14.2
 )
 
-set(FMT_MASTER_PROJECT OFF CACHE BOOL "" FORCE)
+set(RHLIB_MODULES Core Logging)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
-FetchContent_MakeAvailable(fmt cpr)
+FetchContent_MakeAvailable(rhlib cpr)
+add_subdirectory("ThirdParty")
 
 target_link_libraries(main_app PRIVATE
   MSWebView2::headers
-  fmt::fmt
+  rhlib
+  json
   cpr::cpr
 
   ntdll.lib
@@ -67,9 +64,6 @@ target_include_directories(main_app PRIVATE
   "Source"
   "Frontend/bundle"
 )
-
-target_precompile_headers(main_app PRIVATE "Source/Common/StdAfx.hpp")
-target_compile_options(main_app PRIVATE "/FI${CMAKE_CURRENT_SOURCE_DIR}/Source/Common/StdAfx.hpp")
 
 set_target_properties(main_app PROPERTIES
   OUTPUT_NAME "Voices of the Void Launcher"

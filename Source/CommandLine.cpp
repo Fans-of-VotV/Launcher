@@ -1,5 +1,8 @@
 #include "CommandLine.hpp"
 
+#include <shellapi.h>
+#include <string>
+
 void CommandLine::Parse() {
   int argc = 0;
   wchar_t** argv = CommandLineToArgvW(GetCommandLineW(), &argc);

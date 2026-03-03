@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Common/COM/CO.hpp"
-#include <WebView2.h>
+#include "WebView.hpp"
+#include <rh/win32/com/CommonObject.hpp>
 
 class Application;
 
